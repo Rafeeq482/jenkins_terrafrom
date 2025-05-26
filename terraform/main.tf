@@ -12,7 +12,7 @@ module "ec2_instance" {
   key_name               = "user1"
   monitoring             = true
   vpc_security_group_ids = ["sg-12345678"]
-  subnet_id              = "subnet-eddcdzz4"
+  subnet_id              = "subnet-0663abffc46a4ff40"
 
   tags = {
     Terraform   = "true"
