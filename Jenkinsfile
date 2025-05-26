@@ -1,98 +1,57 @@
 pipeline {
-  agent any
+    agent any
 
-  parameters {
-    choice(name: 'ENV', choices: ['dev', 'prod'], description: 'Select environment to deploy')
-  }
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID') 
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+    }
 
-  environment {
-    TF_WORKSPACE = 'dev'
-  }
-
-  stages {
-    stage('Set AWS Credentials') {
-      steps {
-        withCredentials([[
-          $class: 'AmazonWebServicesCredentialsBinding',
-          credentialsId: 'aws-creds'
-        ]]) {
-          echo "AWS credentials have been securely set"
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Rafeeq482/jenkins_terrafrom.git', branch: 'master'
+            }
         }
-      }
-    }
 
-    stage('Checkout') {
-      steps {
-        git branch: 'main', url: 'https://github.com/adityaxsolanki/multistaging-jenkins.git'
-      }
-    }
-
-    stage('Terraform Init') {
-      steps {
-        dir("terraform/${params.ENV}") {
-          withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds'
-          ]]) {
-            sh 'terraform init'
-          }
+        stage('Init') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform init'
+                }
+            }
         }
-      }
+
+        stage('Validate') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform validate'
+                }
+            }
+        }
+
+        stage('Plan') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform plan -var="environment=dev"'
+                }
+            }
+        }
+        
+        stage('Apply') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform apply -auto-approve -var="environment=dev"'
+                }
+            }
+        }
     }
 
-    stage('Terraform Validate') {
-      steps {
-        dir("terraform/${params.ENV}") {
-          sh 'terraform validate'
+    post {
+        success {
+            echo '✅ Pipeline executed successfully!'
         }
-      }
-    }
-
-    stage('Select Workspace') {
-      steps {
-        dir("terraform/${params.ENV}") {
-          sh """
-            terraform workspace new ${params.ENV} || terraform workspace select ${params.ENV}
-          """
+        failure {
+            echo '❌ Pipeline failed. Please check the logs.'
         }
-      }
     }
-
-    stage('Terraform Plan') {
-      steps {
-        dir("terraform/${params.ENV}") {
-          withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds'
-          ]]) {
-            sh 'terraform plan -out=tfplan'
-          }
-        }
-      }
-    }
-
-    stage('Approval (for prod)') {
-      when {
-        expression { return params.ENV == 'prod' }
-      }
-      steps {
-        timeout(time: 5, unit: 'MINUTES') {
-          input message: "Apply Terraform changes to PROD?"
-        }
-      }
-    }
-
-    stage('Terraform Apply') {
-      steps {
-        dir("terraform/${params.ENV}") {
-          withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds'
-          ]]) {
-            sh 'terraform apply -auto-approve tfplan'
-          }
-        }
-      }
-    }
-  }
 }
