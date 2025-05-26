@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-1"
+  region = "ap-south-1"
 }
 
 module "ec2_instance" {
@@ -11,8 +11,8 @@ module "ec2_instance" {
   instance_type          = "t2.micro"
   key_name               = "user1"
   monitoring             = true
-  vpc_security_group_ids = ["sg-0c319cf76322c0e08"]
-  subnet_id              = "subnet-0663abffc46a4ff40"
+  vpc_security_group_ids = ["sg-0fef0819f181d85b9"]
+  subnet_id              = "subnet-06cdf6a7520a97aee"
 
   tags = {
     Terraform   = "true"
